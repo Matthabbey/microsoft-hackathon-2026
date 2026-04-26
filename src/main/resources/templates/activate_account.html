@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Activate Account</title>
+</head>
+<body>
+
+<h2>Hello [[${username}]]</h2>
+
+<p>Your activation code is:</p>
+
+<h3>[[${activation_code}]]</h3>
+
+<p>
+    Click below to activate:
+</p>
+
+<a th:href="${confirmationUrl}">Activate Account</a>
+
+</body>
+</html>
