@@ -1,0 +1,11 @@
+target/
+.git/
+.vs/
+.idea/
+*.iml
+.settings/
+.project
+.classpath
+*.log
+uploads/
+*.md

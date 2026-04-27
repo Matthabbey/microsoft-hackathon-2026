@@ -16,14 +16,20 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
 public class BeansConfig {
 
     private final UserDetailsService userDetailsService;
+
+    @Value("${application.cors.allowed-origins:http://localhost:4200}")
+    private String allowedOrigins;
 
     // ================= AUTH =================
 
@@ -61,7 +67,7 @@ public class BeansConfig {
 
         config.setAllowCredentials(true);
 
-        config.setAllowedOrigins(Collections.singletonList("http://localhost:4200"));
+        config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
 
         config.setAllowedHeaders(Arrays.asList(
                 HttpHeaders.ORIGIN,
