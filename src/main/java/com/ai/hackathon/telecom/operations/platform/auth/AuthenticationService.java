@@ -1,5 +1,8 @@
 package com.ai.hackathon.telecom.operations.platform.auth;
 
+import com.ai.hackathon.telecom.operations.platform.audit.AuditAction;
+import com.ai.hackathon.telecom.operations.platform.audit.AuditResult;
+import com.ai.hackathon.telecom.operations.platform.audit.AuditService;
 import com.ai.hackathon.telecom.operations.platform.dtos.AuthenticationRequest;
 import com.ai.hackathon.telecom.operations.platform.dtos.AuthenticationResponse;
 import com.ai.hackathon.telecom.operations.platform.dtos.RegistrationRequest;
@@ -12,6 +15,7 @@ import com.ai.hackathon.telecom.operations.platform.security.JwtService;
 import com.ai.hackathon.telecom.operations.platform.user.Token;
 import com.ai.hackathon.telecom.operations.platform.user.User;
 import jakarta.mail.MessagingException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -37,6 +41,8 @@ public class AuthenticationService {
     private final RoleRepository roleRepository;
     private final EmailService emailService;
     private final TokenRepository tokenRepository;
+    private final AuditService auditService;
+    private final HttpServletRequest httpServletRequest;
 
     @Value("${application.mailing.frontend.activation-url}")
     private String activationUrl;
@@ -59,39 +65,82 @@ public class AuthenticationService {
 
         userRepository.save(user);
 
+        auditService.logAuthEvent(
+                AuditAction.USER_REGISTRATION,
+                AuditResult.SUCCESS,
+                user,
+                httpServletRequest,
+                "User registered: " + user.getEmail()
+        );
+
         sendValidationEmail(user);
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        try {
+            var auth = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()));
 
-        var auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()));
+            String email = auth.getName();
 
-        String email = auth.getName();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            var claims = new HashMap<String, Object>();
+            claims.put("fullName", user.getFullName());
+            claims.put("roles", user.getAuthorities().stream()
+                    .map(role -> role.getAuthority())
+                    .toList());
+            var jwtToken = jwtService.generateToken(claims, user);
 
-        var claims = new HashMap<String, Object>();
-        claims.put("fullName", user.getFullName());
-        claims.put("roles", user.getAuthorities().stream()
-                .map(role -> role.getAuthority())
-                .toList());
-        var jwtToken = jwtService.generateToken(claims, user);
-        return AuthenticationResponse.builder()
-                .token(jwtToken)
-                .build();
+            auditService.logAuthEvent(
+                    AuditAction.USER_LOGIN,
+                    AuditResult.SUCCESS,
+                    user,
+                    httpServletRequest,
+                    "User logged in: " + user.getEmail()
+            );
+
+            return AuthenticationResponse.builder()
+                    .token(jwtToken)
+                    .build();
+        } catch (Exception e) {
+            auditService.logAuthEventByEmail(
+                    AuditAction.USER_LOGIN_FAILED,
+                    AuditResult.FAILURE,
+                    request.getEmail(),
+                    httpServletRequest,
+                    "Login failed for: " + request.getEmail()
+            );
+            throw e;
+        }
     }
 
     @Transactional
     public void activateAccount(String token) throws MessagingException {
 
         Token savedToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid activation token"));
+                .orElseThrow(() -> {
+                    auditService.logAuthEventByEmail(
+                            AuditAction.ACCOUNT_ACTIVATION_FAILED,
+                            AuditResult.FAILURE,
+                            null,
+                            httpServletRequest,
+                            "Invalid activation token"
+                    );
+                    return new RuntimeException("Invalid activation token");
+                });
 
         if (LocalDateTime.now().isAfter(savedToken.getExpiresAt())) {
+            auditService.logAuthEvent(
+                    AuditAction.ACCOUNT_ACTIVATION_FAILED,
+                    AuditResult.FAILURE,
+                    savedToken.getUser(),
+                    httpServletRequest,
+                    "Activation token expired for: " + savedToken.getUser().getEmail()
+            );
 
             sendValidationEmail(savedToken.getUser());
 
@@ -108,6 +157,14 @@ public class AuthenticationService {
 
         savedToken.setValidatedAt(LocalDateTime.now());
         tokenRepository.save(savedToken);
+
+        auditService.logAuthEvent(
+                AuditAction.ACCOUNT_ACTIVATION,
+                AuditResult.SUCCESS,
+                user,
+                httpServletRequest,
+                "Account activated: " + user.getEmail()
+        );
     }
     private String generateAndSaveActivationToken(User user) {
 

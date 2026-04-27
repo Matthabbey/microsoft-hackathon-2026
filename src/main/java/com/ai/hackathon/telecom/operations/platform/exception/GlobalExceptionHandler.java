@@ -1,6 +1,9 @@
 package com.ai.hackathon.telecom.operations.platform.exception;
 
+import com.ai.hackathon.telecom.operations.platform.audit.AuditService;
 import jakarta.mail.MessagingException;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -16,7 +19,11 @@ import static com.ai.hackathon.telecom.operations.platform.exception.BusinessErr
 import static org.springframework.http.HttpStatus.*;
 
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final AuditService auditService;
+    private final HttpServletRequest httpServletRequest;
 
     @ExceptionHandler(LockedException.class)
     public ResponseEntity<ExceptionResponse> handleException(LockedException exp) {
@@ -107,6 +114,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ExceptionResponse> handleException(Exception exp) {
         exp.printStackTrace();
+        auditService.logSystemError(httpServletRequest, exp);
         return ResponseEntity
                 .status(INTERNAL_SERVER_ERROR)
                 .body(

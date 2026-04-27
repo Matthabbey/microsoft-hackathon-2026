@@ -1,0 +1,16 @@
+package com.ai.hackathon.telecom.operations.platform.audit;
+
+public enum AuditAction {
+    USER_REGISTRATION,
+    USER_LOGIN,
+    USER_LOGIN_FAILED,
+    ACCOUNT_ACTIVATION,
+    ACCOUNT_ACTIVATION_FAILED,
+    HTTP_REQUEST,
+    USER_UPDATE,
+    USER_DELETE,
+    ROLE_CHANGE,
+    PASSWORD_CHANGE,
+    AUDIT_LOG_ACCESS,
+    SYSTEM_ERROR
+}
