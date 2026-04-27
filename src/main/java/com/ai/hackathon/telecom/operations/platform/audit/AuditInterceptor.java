@@ -24,6 +24,11 @@ public class AuditInterceptor implements HandlerInterceptor {
             return;
         }
 
+        // Skip webhook endpoints — those are called by external services
+        if (path.startsWith("/api/v1/webhooks")) {
+            return;
+        }
+
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
             return;

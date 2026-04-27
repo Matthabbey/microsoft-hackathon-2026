@@ -17,6 +17,8 @@ public enum BusinessErrorCodes {
     ACTIVATION_TOKEN_EXPIRED(307, BAD_REQUEST, "Activation token has expired"),
     ROLE_NOT_INITIALIZED(308, INTERNAL_SERVER_ERROR, "Required role not initialized"),
     ACCESS_DENIED(309, FORBIDDEN, "You do not have permission to access this resource"),
+    CALL_NOT_FOUND(310, NOT_FOUND, "Call record not found"),
+    CALL_INITIATION_FAILED(311, INTERNAL_SERVER_ERROR, "Failed to initiate call"),
     ;
 
     @Getter

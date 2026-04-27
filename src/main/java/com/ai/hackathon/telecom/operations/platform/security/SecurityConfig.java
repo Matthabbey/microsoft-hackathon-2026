@@ -36,6 +36,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(req -> req
                         .requestMatchers(
                                 "/api/v1/auth/**",
+                                "/api/v1/webhooks/twilio/**",
+                                "/ws/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**").permitAll()
 

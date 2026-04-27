@@ -1,6 +1,8 @@
 package com.ai.hackathon.telecom.operations.platform.exception;
 
 import com.ai.hackathon.telecom.operations.platform.audit.AuditService;
+import com.ai.hackathon.telecom.operations.platform.call.CallNotFoundException;
+import com.twilio.exception.ApiException;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -114,6 +116,29 @@ public class GlobalExceptionHandler {
                 .body(ExceptionResponse.builder()
                         .businessErrorCode(ACCESS_DENIED.getCode())
                         .businessErrorDescription(ACCESS_DENIED.getDescription())
+                        .error(exp.getMessage())
+                        .build());
+    }
+
+    @ExceptionHandler(CallNotFoundException.class)
+    public ResponseEntity<ExceptionResponse> handleException(CallNotFoundException exp) {
+        return ResponseEntity
+                .status(CALL_NOT_FOUND.getHttpStatus())
+                .body(ExceptionResponse.builder()
+                        .businessErrorCode(CALL_NOT_FOUND.getCode())
+                        .businessErrorDescription(CALL_NOT_FOUND.getDescription())
+                        .error(exp.getMessage())
+                        .build());
+    }
+
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ExceptionResponse> handleException(ApiException exp) {
+        log.error("Twilio API error: {}", exp.getMessage(), exp);
+        return ResponseEntity
+                .status(CALL_INITIATION_FAILED.getHttpStatus())
+                .body(ExceptionResponse.builder()
+                        .businessErrorCode(CALL_INITIATION_FAILED.getCode())
+                        .businessErrorDescription(CALL_INITIATION_FAILED.getDescription())
                         .error(exp.getMessage())
                         .build());
     }

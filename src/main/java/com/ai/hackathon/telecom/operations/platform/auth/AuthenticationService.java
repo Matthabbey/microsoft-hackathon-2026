@@ -50,6 +50,10 @@ public class AuthenticationService {
 
     public void register(RegistrationRequest request) throws MessagingException {
 
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new EmailAlreadyExistsException("A user with email " + request.getEmail() + " already exists");
+        }
+
         var userRole = roleRepository.findByName("ROLE_USER")
                 .orElseThrow(() -> new IllegalStateException("ROLE_USER not initialized in DB"));
 
@@ -78,35 +82,23 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> {
+                    auditService.logAuthEventByEmail(
+                            AuditAction.USER_LOGIN_FAILED,
+                            AuditResult.FAILURE,
+                            request.getEmail(),
+                            httpServletRequest,
+                            "Login failed - user not found: " + request.getEmail()
+                    );
+                    return new UsernameNotFoundException("User with email '" + request.getEmail() + "' not found");
+                });
+
         try {
-            var auth = authenticationManager.authenticate(
+            authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getEmail(),
                             request.getPassword()));
-
-            String email = auth.getName();
-
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-            var claims = new HashMap<String, Object>();
-            claims.put("fullName", user.getFullName());
-            claims.put("roles", user.getAuthorities().stream()
-                    .map(role -> role.getAuthority())
-                    .toList());
-            var jwtToken = jwtService.generateToken(claims, user);
-
-            auditService.logAuthEvent(
-                    AuditAction.USER_LOGIN,
-                    AuditResult.SUCCESS,
-                    user,
-                    httpServletRequest,
-                    "User logged in: " + user.getEmail()
-            );
-
-            return AuthenticationResponse.builder()
-                    .token(jwtToken)
-                    .build();
         } catch (Exception e) {
             auditService.logAuthEventByEmail(
                     AuditAction.USER_LOGIN_FAILED,
@@ -117,6 +109,25 @@ public class AuthenticationService {
             );
             throw e;
         }
+
+        var claims = new HashMap<String, Object>();
+        claims.put("fullName", user.getFullName());
+        claims.put("roles", user.getAuthorities().stream()
+                .map(role -> role.getAuthority())
+                .toList());
+        var jwtToken = jwtService.generateToken(claims, user);
+
+        auditService.logAuthEvent(
+                AuditAction.USER_LOGIN,
+                AuditResult.SUCCESS,
+                user,
+                httpServletRequest,
+                "User logged in: " + user.getEmail()
+        );
+
+        return AuthenticationResponse.builder()
+                .token(jwtToken)
+                .build();
     }
 
     @Transactional
