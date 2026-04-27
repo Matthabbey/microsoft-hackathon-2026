@@ -96,7 +96,7 @@ public class User implements UserDetails, Principal {
     }
 
     public String fullName() {
-        return getFirstname() + " " + getLastname();
+        return getFullName();
     }
 
     @Override
@@ -105,6 +105,8 @@ public class User implements UserDetails, Principal {
     }
 
     public String getFullName() {
-        return firstname + " " + lastname;
+        String first = firstname != null ? firstname : "";
+        String last = lastname != null ? lastname : "";
+        return (first + " " + last).trim();
     }
 }

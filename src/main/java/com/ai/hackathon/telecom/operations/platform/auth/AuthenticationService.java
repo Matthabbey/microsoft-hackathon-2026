@@ -6,6 +6,7 @@ import com.ai.hackathon.telecom.operations.platform.audit.AuditService;
 import com.ai.hackathon.telecom.operations.platform.dtos.AuthenticationRequest;
 import com.ai.hackathon.telecom.operations.platform.dtos.AuthenticationResponse;
 import com.ai.hackathon.telecom.operations.platform.dtos.RegistrationRequest;
+import com.ai.hackathon.telecom.operations.platform.exception.ActivationTokenException;
 import com.ai.hackathon.telecom.operations.platform.email.EmailService;
 import com.ai.hackathon.telecom.operations.platform.email.EmailTemplateName;
 import com.ai.hackathon.telecom.operations.platform.repository.TokenRepository;
@@ -86,7 +87,7 @@ public class AuthenticationService {
             String email = auth.getName();
 
             User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
             var claims = new HashMap<String, Object>();
             claims.put("fullName", user.getFullName());
@@ -130,7 +131,7 @@ public class AuthenticationService {
                             httpServletRequest,
                             "Invalid activation token"
                     );
-                    return new RuntimeException("Invalid activation token");
+                    return new ActivationTokenException("Invalid activation token");
                 });
 
         if (LocalDateTime.now().isAfter(savedToken.getExpiresAt())) {
@@ -144,7 +145,7 @@ public class AuthenticationService {
 
             sendValidationEmail(savedToken.getUser());
 
-            throw new RuntimeException(
+            throw new ActivationTokenException(
                     "Activation token expired. A new token has been sent to your email"
             );
         }
