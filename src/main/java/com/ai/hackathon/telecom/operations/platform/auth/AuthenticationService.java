@@ -1,8 +1,12 @@
 package com.ai.hackathon.telecom.operations.platform.auth;
 
+import com.ai.hackathon.telecom.operations.platform.audit.AuditAction;
+import com.ai.hackathon.telecom.operations.platform.audit.AuditResult;
+import com.ai.hackathon.telecom.operations.platform.audit.AuditService;
 import com.ai.hackathon.telecom.operations.platform.dtos.AuthenticationRequest;
 import com.ai.hackathon.telecom.operations.platform.dtos.AuthenticationResponse;
 import com.ai.hackathon.telecom.operations.platform.dtos.RegistrationRequest;
+import com.ai.hackathon.telecom.operations.platform.exception.ActivationTokenException;
 import com.ai.hackathon.telecom.operations.platform.email.EmailService;
 import com.ai.hackathon.telecom.operations.platform.email.EmailTemplateName;
 import com.ai.hackathon.telecom.operations.platform.repository.TokenRepository;
@@ -12,6 +16,7 @@ import com.ai.hackathon.telecom.operations.platform.security.JwtService;
 import com.ai.hackathon.telecom.operations.platform.user.Token;
 import com.ai.hackathon.telecom.operations.platform.user.User;
 import jakarta.mail.MessagingException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +30,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Logger;
 
 @Service
 @RequiredArgsConstructor
@@ -37,18 +43,23 @@ public class AuthenticationService {
     private final RoleRepository roleRepository;
     private final EmailService emailService;
     private final TokenRepository tokenRepository;
+    private final AuditService auditService;
+    private final HttpServletRequest httpServletRequest;
 
     @Value("${application.mailing.frontend.activation-url}")
     private String activationUrl;
 
     public void register(RegistrationRequest request) throws MessagingException {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new EmailAlreadyExistsException("A user with email " + request.getEmail() + " already exists");
+        }
 
-        var userRole = roleRepository.findByName("ROLE_USER")
-                .orElseThrow(() -> new IllegalStateException("ROLE_USER not initialized in DB"));
+        var userRole = roleRepository.findByName("ROLE_VIEWER")
+                .orElseThrow(() -> new IllegalStateException("ROLE_VIEWER not initialized in DB"));
 
         var user = User.builder()
-                .firstname(request.getFirstname())
-                .lastname(request.getLastname())
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
                 .email(request.getEmail())
                 .phoneNumber(request.getPhoneNumber())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -59,20 +70,45 @@ public class AuthenticationService {
 
         userRepository.save(user);
 
+        auditService.logAuthEvent(
+                AuditAction.USER_REGISTRATION,
+                AuditResult.SUCCESS,
+                user,
+                httpServletRequest,
+                "User registered: " + user.getEmail()
+        );
+
         sendValidationEmail(user);
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> {
+                    auditService.logAuthEventByEmail(
+                            AuditAction.USER_LOGIN_FAILED,
+                            AuditResult.FAILURE,
+                            request.getEmail(),
+                            httpServletRequest,
+                            "Login failed - user not found: " + request.getEmail()
+                    );
+                    return new UsernameNotFoundException("User with email '" + request.getEmail() + "' not found");
+                });
 
-        var auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()));
-
-        String email = auth.getName();
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()));
+        } catch (Exception e) {
+            auditService.logAuthEventByEmail(
+                    AuditAction.USER_LOGIN_FAILED,
+                    AuditResult.FAILURE,
+                    request.getEmail(),
+                    httpServletRequest,
+                    "Login failed for: " + request.getEmail()
+            );
+            throw e;
+        }
 
         var claims = new HashMap<String, Object>();
         claims.put("fullName", user.getFullName());
@@ -80,6 +116,15 @@ public class AuthenticationService {
                 .map(role -> role.getAuthority())
                 .toList());
         var jwtToken = jwtService.generateToken(claims, user);
+
+        auditService.logAuthEvent(
+                AuditAction.USER_LOGIN,
+                AuditResult.SUCCESS,
+                user,
+                httpServletRequest,
+                "User logged in: " + user.getEmail()
+        );
+
         return AuthenticationResponse.builder()
                 .token(jwtToken)
                 .build();
@@ -89,13 +134,29 @@ public class AuthenticationService {
     public void activateAccount(String token) throws MessagingException {
 
         Token savedToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid activation token"));
+                .orElseThrow(() -> {
+                    auditService.logAuthEventByEmail(
+                            AuditAction.ACCOUNT_ACTIVATION_FAILED,
+                            AuditResult.FAILURE,
+                            null,
+                            httpServletRequest,
+                            "Invalid activation token"
+                    );
+                    return new ActivationTokenException("Invalid activation token");
+                });
 
         if (LocalDateTime.now().isAfter(savedToken.getExpiresAt())) {
+            auditService.logAuthEvent(
+                    AuditAction.ACCOUNT_ACTIVATION_FAILED,
+                    AuditResult.FAILURE,
+                    savedToken.getUser(),
+                    httpServletRequest,
+                    "Activation token expired for: " + savedToken.getUser().getEmail()
+            );
 
             sendValidationEmail(savedToken.getUser());
 
-            throw new RuntimeException(
+            throw new ActivationTokenException(
                     "Activation token expired. A new token has been sent to your email"
             );
         }
@@ -108,6 +169,14 @@ public class AuthenticationService {
 
         savedToken.setValidatedAt(LocalDateTime.now());
         tokenRepository.save(savedToken);
+
+        auditService.logAuthEvent(
+                AuditAction.ACCOUNT_ACTIVATION,
+                AuditResult.SUCCESS,
+                user,
+                httpServletRequest,
+                "Account activated: " + user.getEmail()
+        );
     }
     private String generateAndSaveActivationToken(User user) {
 

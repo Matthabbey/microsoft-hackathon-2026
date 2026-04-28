@@ -16,10 +16,10 @@ public class RegistrationRequest {
 
     @NotEmpty(message = "Firstname is mandatory")
     @NotNull(message = "Firstname is mandatory")
-    private String firstname;
+    private String firstName;
     @NotEmpty(message = "Lastname is mandatory")
     @NotNull(message = "Lastname is mandatory")
-    private String lastname;
+    private String lastName;
     @Email(message = "Email is not well formatted")
     @NotEmpty(message = "Email is mandatory")
     @NotNull(message = "Email is mandatory")

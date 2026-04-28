@@ -1,5 +1,6 @@
 package com.ai.hackathon.telecom.operations.platform.auth;
 
+import com.ai.hackathon.telecom.operations.platform.dtos.ApiResponse;
 import com.ai.hackathon.telecom.operations.platform.dtos.AuthenticationRequest;
 import com.ai.hackathon.telecom.operations.platform.dtos.AuthenticationResponse;
 import com.ai.hackathon.telecom.operations.platform.dtos.RegistrationRequest;
@@ -18,22 +19,20 @@ public class AuthenticationController {
     private final AuthenticationService service;
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(
+    public ResponseEntity<ApiResponse<Void>> register(
             @RequestBody @Valid RegistrationRequest request) throws MessagingException {
         service.register(request);
-        return ResponseEntity.ok("User registered successfully. Check email for activation link.");
+        return ResponseEntity.ok(ApiResponse.success("User registered successfully. Check email for activation link."));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthenticationResponse> login(@RequestBody @Valid AuthenticationRequest request) {
-
-        return ResponseEntity.ok(service.authenticate(request));
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> login(@RequestBody @Valid AuthenticationRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Login successful", service.authenticate(request)));
     }
 
     @GetMapping("/activate-account")
-    public ResponseEntity<String> activateAccount(@RequestParam String token) throws MessagingException {
-
+    public ResponseEntity<ApiResponse<Void>> activateAccount(@RequestParam String token) throws MessagingException {
         service.activateAccount(token);
-        return ResponseEntity.ok("Account activated successfully.");
+        return ResponseEntity.ok(ApiResponse.success("Account activated successfully."));
     }
 }

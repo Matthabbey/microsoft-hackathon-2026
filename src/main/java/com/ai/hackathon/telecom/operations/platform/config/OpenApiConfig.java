@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.enums.SecuritySchemeIn;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
-import io.swagger.v3.oas.annotations.info.License;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.servers.Server;
@@ -13,23 +12,17 @@ import io.swagger.v3.oas.annotations.servers.Server;
 @OpenAPIDefinition(
         info = @Info(
                 contact = @Contact(
-                        name = "AnayochukwuJames",
-                        email = "jamesugwuodoke@gmail.com",
-                        url = "coming soon..."
+                        name = "Telecom Operations Platform",
+                        email = "jamesugwuodoke@gmail.com"
                 ),
-                description = "OpenApi documentation for Spring Security",
-                title = "OpenApi specification - AnayochukwuJames",
-                version = "1.0",
-                license = @License(
-                        name = "Licence name",
-                        url = "https://some-url.com"
-                ),
-                termsOfService = "Terms of service"
+                description = "REST API for the Telecom Operations Platform — user management, call tracking, and audit logging with RBAC (Admin, Manager, Agent, Viewer)",
+                title = "Telecom Operations Platform API",
+                version = "1.0"
         ),
         servers = {
                 @Server(
                         description = "Local ENV",
-                        url = "http://localhost:8088/api/v1"
+                        url = "http://localhost:8080"
                 ),
                 @Server(
                         description = "PROD ENV",
@@ -44,7 +37,7 @@ import io.swagger.v3.oas.annotations.servers.Server;
 )
 @SecurityScheme(
         name = "bearerAuth",
-        description = "JWT auth description",
+        description = "Paste your JWT token here (without the 'Bearer ' prefix)",
         scheme = "bearer",
         type = SecuritySchemeType.HTTP,
         bearerFormat = "JWT",

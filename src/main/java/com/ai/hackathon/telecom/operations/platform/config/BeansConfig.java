@@ -28,7 +28,7 @@ public class BeansConfig {
 
     private final UserDetailsService userDetailsService;
 
-    @Value("${application.cors.allowed-origins:http://localhost:4200}")
+    @Value("${application.cors.allowed-origins:http://localhost:3000}")
     private String allowedOrigins;
 
     // ================= AUTH =================

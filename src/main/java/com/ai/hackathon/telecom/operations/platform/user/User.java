@@ -37,8 +37,8 @@ public class User implements UserDetails, Principal {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    private String firstname;
-    private String lastname;
+    private String firstName;
+    private String lastName;
     private LocalDate dateOfBirth;
     @Column(unique = true)
     private String email;
@@ -96,7 +96,7 @@ public class User implements UserDetails, Principal {
     }
 
     public String fullName() {
-        return getFirstname() + " " + getLastname();
+        return getFullName();
     }
 
     @Override
@@ -105,6 +105,8 @@ public class User implements UserDetails, Principal {
     }
 
     public String getFullName() {
-        return firstname + " " + lastname;
+        String first = firstName != null ? firstName : "";
+        String last = lastName != null ? lastName : "";
+        return (first + " " + last).trim();
     }
 }

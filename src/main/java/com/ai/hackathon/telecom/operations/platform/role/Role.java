@@ -26,7 +26,7 @@ public class Role {
     private Integer id;
 
     @Column(unique = true, nullable = false)
-    private String name; // ROLE_USER, ROLE_ADMIN, ROLE_SUPER_ADMIN
+    private String name; // ROLE_ADMIN, ROLE_MANAGER, ROLE_AGENT, ROLE_VIEWER
 
     @ManyToMany(mappedBy = "roles")
     @JsonIgnore
