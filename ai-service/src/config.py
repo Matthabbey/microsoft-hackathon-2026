@@ -4,21 +4,21 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # Azure OpenAI
-    azure_openai_endpoint: str = "https://telecom-hackathon.openai.azure.com/"
-    azure_openai_api_key: str = ""
-    azure_openai_deployment: str = "gpt-5.4-nano"
-    azure_openai_api_version: str = "2024-06-01"
+    azure_openai_endpoint: str
+    azure_openai_api_key: str
+    azure_openai_deployment: str
+    azure_openai_api_version: str 
     
     # Azure Cognitive Services
-    azure_cognitive_endpoint: str = "https://osina-mnndoh9y-eastus2.cognitiveservices.azure.com"
-    azure_cognitive_endpoint_sweden: str = "https://osina-mo9bbdw6-swedencentral.cognitiveservices.azure.com"
+    azure_cognitive_endpoint: str
+    azure_cognitive_endpoint_sweden: str
     
     # Azure Foundry
-    azure_foundry_api_key: str = ""
+    azure_foundry_api_key: str
     
     # Embedding model
-    azure_embedding_deployment: str = "text-embedding-3-small"
-    azure_embedding_dimensions: int = 1536
+    azure_embedding_deployment: str
+    azure_embedding_dimensions: int
     
     # Server
     host: str = "0.0.0.0"
