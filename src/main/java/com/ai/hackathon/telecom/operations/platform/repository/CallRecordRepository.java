@@ -9,7 +9,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface CallRecordRepository extends JpaRepository<CallRecord, Long> {
@@ -32,4 +34,25 @@ public interface CallRecordRepository extends JpaRepository<CallRecord, Long> {
             @Param("to") LocalDateTime to,
             Pageable pageable
     );
+
+    long countByStatus(CallStatus status);
+
+    long countByDirection(CallDirection direction);
+
+    @Query("SELECT c.status, COUNT(c) FROM CallRecord c GROUP BY c.status")
+    List<Object[]> countByStatusGrouped();
+
+    @Query("SELECT COALESCE(SUM(c.price), 0) FROM CallRecord c WHERE c.price IS NOT NULL")
+    BigDecimal sumTotalCost();
+
+    @Query("SELECT AVG(c.duration) FROM CallRecord c WHERE c.duration IS NOT NULL AND c.duration > 0")
+    Double averageDuration();
+
+    @Query("SELECT MAX(c.duration) FROM CallRecord c WHERE c.duration IS NOT NULL")
+    Integer maxDuration();
+
+    @Query("SELECT MIN(c.duration) FROM CallRecord c WHERE c.duration IS NOT NULL AND c.duration > 0")
+    Integer minDuration();
+
+    long countByDurationNotNull();
 }
