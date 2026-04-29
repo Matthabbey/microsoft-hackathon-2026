@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long>, JpaSpecificationExecutor<AuditLog> {
 
@@ -36,4 +37,16 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long>, JpaSp
             @Param("to") LocalDateTime to,
             Pageable pageable
     );
+
+    @Query("SELECT COUNT(a) FROM AuditLog a WHERE a.action NOT IN ('HTTP_REQUEST')")
+    long countNonHttpActions();
+
+    @Query("SELECT COUNT(a) FROM AuditLog a WHERE a.action NOT IN ('HTTP_REQUEST') AND a.result = 'SUCCESS'")
+    long countSuccessfulNonHttpActions();
+
+    @Query("SELECT COUNT(a) FROM AuditLog a WHERE a.action NOT IN ('HTTP_REQUEST') AND a.result = 'FAILURE'")
+    long countFailedNonHttpActions();
+
+    @Query("SELECT a.action, COUNT(a) FROM AuditLog a WHERE a.action NOT IN ('HTTP_REQUEST') GROUP BY a.action")
+    List<Object[]> countByActionGrouped();
 }
