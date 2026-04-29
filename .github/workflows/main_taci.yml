@@ -7,6 +7,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -60,4 +63,3 @@ jobs:
           app-name: 'TACI'
           slot-name: 'Production'
           package: '*.jar'
-          
