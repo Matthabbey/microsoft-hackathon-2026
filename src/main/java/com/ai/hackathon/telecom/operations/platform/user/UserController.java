@@ -29,8 +29,8 @@ public class UserController {
     @Operation(summary = "List users (Admins see all, Managers see agents+viewers)")
     public ResponseEntity<ApiResponse<Page<UserResponse>>> listUsers(
             @AuthenticationPrincipal User currentUser,
-            @RequestParam(required = false) String search
-//            Pageable pageable
+            @RequestParam(required = false) String search,
+            Pageable pageable
     ) {
         Page<UserResponse> result;
         if (search != null && !search.isBlank()) {
