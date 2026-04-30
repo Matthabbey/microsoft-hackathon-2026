@@ -1,11 +1,13 @@
 from openai import AzureOpenAI
-import azure.cognitiveservices.speech as speechsdk
 from app.config import (
     AZURE_COGNITIVE_ENDPOINT_SWEDEN,
     AZURE_OPENAI_SECRET_SWEDEN,
-    AZURE_COGNITIVE_ENDPOINT,
-    GPT_5_4_NANO_KEY,
 )
+import os
+import tempfile
+
+TTS_DEPLOYMENT     = os.getenv("AZURE_TTS_DEPLOYMENT", "tts")
+WHISPER_DEPLOYMENT = os.getenv("AZURE_WHISPER_DEPLOYMENT", "whisper")
 
 tts_client = AzureOpenAI(
     azure_endpoint=AZURE_COGNITIVE_ENDPOINT_SWEDEN,
@@ -13,14 +15,9 @@ tts_client = AzureOpenAI(
     api_version="2025-03-01-preview"
 )
 
-stt_config = speechsdk.SpeechConfig(
-    subscription=GPT_5_4_NANO_KEY,
-    endpoint=AZURE_COGNITIVE_ENDPOINT
-)
-
 def text_to_speech(text: str, language: str = "en-NG") -> bytes:
     with tts_client.audio.speech.with_streaming_response.create(
-        model="tts",
+        model=TTS_DEPLOYMENT,
         voice="alloy",
         input=text,
     ) as response:
@@ -30,17 +27,16 @@ def text_to_speech(text: str, language: str = "en-NG") -> bytes:
     return audio_bytes
 
 def speech_to_text(audio_bytes: bytes, language: str = "en-NG") -> str:
-    stream = speechsdk.audio.PushAudioInputStream()
-    stream.write(audio_bytes)
-    stream.close()
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
+            tmp.write(audio_bytes)
+            tmp_path = tmp.name
 
-    audio_cfg  = speechsdk.audio.AudioConfig(stream=stream)
-    recognizer = speechsdk.SpeechRecognizer(
-        speech_config=stt_config,
-        audio_config=audio_cfg,
-    )
-    result = recognizer.recognize_once()
-
-    if result.reason == speechsdk.ResultReason.RecognizedSpeech:
-        return result.text
-    return ""
+        with open(tmp_path, "rb") as audio_file:
+            transcription = tts_client.audio.transcriptions.create(
+                model=WHISPER_DEPLOYMENT,
+                file=audio_file,
+            )
+        return transcription.text
+    except Exception as e:
+        return ""
